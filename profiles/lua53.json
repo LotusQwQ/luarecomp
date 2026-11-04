@@ -1,0 +1,9 @@
+{
+  "name": "lua53",
+  "signature": "1b4c7561",
+  "version": 83,
+  "format": 0,
+  "luac_data": "1993 0d0a 1a0a",
+  "sizes": [["int", 4], ["size_t", 8], ["instruction", 4], ["integer", 8], ["number", 8]],
+  "opcodes": {"type": "identity"}
+}

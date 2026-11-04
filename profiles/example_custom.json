@@ -1,0 +1,14 @@
+{
+  "name": "example_custom",
+  "_comment": "Fictional format showing every option. Not taken from any real game.",
+  "signature": "4741 4d45",
+  "version": 83,
+  "format": 1,
+  "luac_data": "1993 0d0a 1a0a",
+  "sizes": [["int", 4], ["size_t", 4], ["integer", 8], ["number", 8]],
+  "endian": "little",
+  "luac_int": 22136,
+  "luac_num": 370.5,
+  "const_tags": {"float": 19, "integer": 3},
+  "opcodes": {"type": "affine", "mul": 1, "add": 11, "mod": 47}
+}
