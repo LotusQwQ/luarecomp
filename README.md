@@ -11,6 +11,8 @@
 
 编译永远交给对应版本的**真实编译器**（lupa 自带 Lua 5.1–5.4、LuaJIT 2.0/2.1），本工具只负责格式转换，所以生成的指令和官方编译器完全一致。
 
+设计思路、模块划分，以及能做到和做不到的事，见 [docs/DESIGN.md](docs/DESIGN.md)。
+
 ---
 
 ## 支持范围
@@ -321,6 +323,17 @@ LUARECOMP_SLOW=1 python -m unittest discover -s tests   # 加上超大函数（E
 - 贡献代码时请遵守同样的规则：Issue 和 PR 里不要附带第三方产品的文件或密钥。
 
 **责任：** 使用者自行判断并承担使用本工具的全部责任。软件按 MIT 许可"原样"提供，不附带任何担保。本声明不构成法律意见：各地法律对逆向工程、互操作例外和技术保护措施的规定不同，不确定时请咨询专业人士。
+
+## 反馈与问题
+
+使用中遇到问题、发现 bug 或有改进建议，请到 [GitHub Issues](https://github.com/LotusQwQ/luarecomp/issues) 提交。
+
+报告问题时最好附上：
+- 运行的完整命令，以及完整的输出（`check` 的输出已经带有偏移和字段信息，直接贴上即可；需要 Python 调用栈时加 `--traceback`）；
+- 你的 profile；
+- Python、lupa 和本工具的版本（`python -m luarecomp --version`）。
+
+请不要附带第三方商业产品的字节码文件、密钥或针对它们的 profile（见上文「使用边界」）。需要样本才能复现时，尽量用标准 Lua 编译一段最小代码，再用虚构的 profile 转换出来。
 
 ## License
 
