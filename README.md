@@ -36,7 +36,7 @@ pip install lupa          # 必需，提供各版本真实的 Lua / LuaJIT
 pip install -e .          # 可选：安装后有 `luarecomp` 命令
 ```
 
-Python 3.8+。不安装也可以直接 `python -m luarecomp ...`。
+Python 3.10+。不安装也可以直接 `python -m luarecomp ...`。
 
 ## 快速开始
 

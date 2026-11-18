@@ -2,7 +2,7 @@
 
 本工具不写编译器，也不写虚拟机。编译和执行都交给真实的 Lua / LuaJIT，它只负责在「标准字节码」和「魔改字节码」之间做格式转换，再在标准格式上做分析和修改。
 
-支持 Lua 5.1 – 5.4、LuaJIT 2.0 / 2.1。Python 3.8+，依赖 [lupa](https://github.com/scoder/lupa)。用法见 [README](../README.md)。
+支持 Lua 5.1 – 5.4、LuaJIT 2.0 / 2.1。Python 3.10+，依赖 [lupa](https://github.com/scoder/lupa)。用法见 [README](../README.md)。
 
 ## 数据怎么流动
 
