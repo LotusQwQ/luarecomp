@@ -24,6 +24,18 @@ local odd = {[true] = 1, [2.5] = "x", ["and"] = 3, ["with space"] = 4}
 return {rows, index}, odd, "tail", 42, 0.5
 """
 
+# big enough (> 8 entries per container) for the one-element-per-line layout of build-table
+BIG = r"""
+local rows, index, names = {}, {}, {}
+for i = 1, 20 do
+  rows[i] = Make("ItemData", {id = i, owner = 100 + i % 3, name = "item" .. i})
+  index[i] = index[i] or {}
+  index[i][100 + i % 3] = i
+end
+for i = 1, 12 do names["n" .. i] = i * 0.5 end
+return {rows, index}, names, "small"
+"""
+
 
 class DataTable(unittest.TestCase):
     def test_round_trip_every_vm(self):
@@ -35,6 +47,18 @@ class DataTable(unittest.TestCase):
                 built, src = T.build(first, prof, constructor="Make")
                 self.assertEqual(T.diff(first, T.run(built, prof, records=["Make"])), [])
                 self.assertEqual(json.loads(json.dumps(first)), first)       # JSON-safe
+
+    def test_big_tables_one_element_per_line(self):
+        prof = R.Profile({})
+        data = T.run(R.compile(BIG.encode(), prof), prof, records=["Make"])
+        built, src = T.build(data, prof, constructor="Make")
+        self.assertEqual(T.diff(data, T.run(built, prof, records=["Make"])), [])
+        lines = src.splitlines()
+        self.assertIn(b"local r1 = {r1_1, r1_2}", lines)      # {rows, index} split into locals
+        for name in (b"r1_1", b"r1_2", b"r2"):
+            self.assertIn(b"local " + name + b" = {", lines)
+        self.assertGreater(len(lines), 20 + 12)                # one row / key per line
+        self.assertIn(b'local r3 = "small"', lines)
 
     def test_json_shape(self):
         prof = R.Profile({})

@@ -63,6 +63,20 @@ class Inject(unittest.TestCase):
                 self.assertEqual(msgs[0], msgs[1])
                 self.assertIn("t.lua:5", msgs[0])
 
+    def test_dry_run(self):
+        for v, strip, ch in self.cases:
+            with self.subTest(v=v, strip=strip):
+                same = I.inject(ch, I.compile_child(b"X = 1", v))
+                self.assertEqual(I.dry_run(ch, same), (True, (True, [b"orig", 3, 2]), (True, [b"orig", 3, 2])))
+                changed = I.inject(ch, I.compile_child(b"MARK = 'injected'", v))
+                ok, a, b = I.dry_run(ch, changed)
+                self.assertFalse(ok)
+                self.assertEqual(b, (True, [b"injected", 3, 2]))
+                ok, a, b = I.dry_run(ch, same, b"function(env) env.FAIL = true end")
+                self.assertTrue(ok)
+                self.assertFalse(a[0])
+                self.assertIn("boom", a[1])
+
     def test_wrong_version_child(self):
         ch = self.cases[0][2]
         with self.assertRaises(I.InjectError):
