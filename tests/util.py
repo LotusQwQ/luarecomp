@@ -9,7 +9,27 @@ import luarecomp as R  # noqa: E402
 from luarecomp import runtime as RT  # noqa: E402
 import corpus  # noqa: E402
 
-VERSIONS = ("5.1", "5.2", "5.3", "5.4", "luajit2.0", "luajit2.1")
+ALL_VERSIONS = ("5.1", "5.2", "5.3", "5.4", "luajit2.0", "luajit2.1")
+
+
+def _available(v):
+    try:
+        RT.runtime(v)
+        return True
+    except RT.RecompError:
+        return False
+
+
+# lupa does not ship LuaJIT for every platform (e.g. macOS arm64); tests for missing VMs are skipped.
+# LUARECOMP_REQUIRE_ALL=1 (set in CI where all VMs exist) turns a missing VM into an error instead.
+VERSIONS = tuple(v for v in ALL_VERSIONS if _available(v))
+MISSING = tuple(v for v in ALL_VERSIONS if v not in VERSIONS)
+if MISSING:
+    if os.environ.get("LUARECOMP_REQUIRE_ALL") == "1":
+        raise RuntimeError("Lua VMs missing from lupa: %s" % ", ".join(MISSING))
+    sys.stderr.write("note: skipping tests for unavailable Lua VMs: %s\n" % ", ".join(MISSING))
+
+
 SLOW = os.environ.get("LUARECOMP_SLOW") == "1"     # also run the huge-function corpus everywhere
 DATA = os.path.join(HERE, "data")
 

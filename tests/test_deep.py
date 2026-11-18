@@ -3,7 +3,7 @@ import os
 import random
 import unittest
 
-from util import DATA, R, RT, run, sources
+from util import DATA, R, RT, VERSIONS, run, sources
 from luarecomp import verify as V
 
 perm = list(range(47))
@@ -43,6 +43,10 @@ class Deep(unittest.TestCase):
     def test_deep_formats(self):
         for name, d in DEEP.items():
             prof = R.Profile(dict(d, name=name), base_dir=DATA, allow_plugins=True)
+            if prof.lua not in VERSIONS:
+                with self.subTest(profile=name):
+                    self.skipTest("%s not available" % prof.lua)
+                continue
             for sname, src in sources(prof.lua, big=prof.lua == "5.1"):
                 with self.subTest(profile=name, src=sname):
                     std = RT.compile_std(src, prof.lua, b"@" + sname.encode())

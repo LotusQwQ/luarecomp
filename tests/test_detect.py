@@ -1,7 +1,7 @@
 """inspect: header arrangements are tried, not guessed; ambiguity is reported."""
 import unittest
 
-from util import R
+from util import R, VERSIONS
 from luarecomp import detect
 
 LONG = b"local s = '" + b"x" * 300 + b"' return s, 1, 2.5"
@@ -34,6 +34,8 @@ class Detect(unittest.TestCase):
                   {"lua": "luajit2.0", "signature": "1b4c58"}):
             with self.subTest(d=d):
                 prof = R.Profile(d)
+                if prof.lua not in VERSIONS:
+                    self.skipTest("%s not available" % prof.lua)
                 res = detect.inspect([R.compile(LONG, prof)])
                 self.assertEqual(len(res["groups"]), 1, res["report"])
                 self.assertEqual(res["profile"]["lua"], prof.lua)

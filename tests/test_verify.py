@@ -24,6 +24,10 @@ class Verify(unittest.TestCase):
     def test_luajit_modes_match_vm(self):
         # a function containing every opcode; jit.util.funcbc reports each opcode's mode bits
         for v, isa in (("luajit2.0", ISA.LUAJIT20), ("luajit2.1", ISA.LUAJIT21)):
+            if v not in VERSIONS:
+                with self.subTest(v=v):
+                    self.skipTest("%s not available" % v)
+                continue
             st = R.standard(v)
             ch = R.parse(RT.compile_std(b"return 1", v, b"=x", strip=True), st)
             ch.root["code"] = list(range(isa.num))
