@@ -1,0 +1,18 @@
+{
+  "name": "example_deep",
+  "_comment": "Fictional format showing the deep-modification options. Not taken from any real game.",
+  "lua": "5.3",
+  "signature": "5a5a",
+  "format": 7,
+  "luac_data": "",
+  "sizes": {"size_t": 4, "integer": 8, "number": 8},
+  "header": ["signature", {"const": "c0de"}, "version", "format", {"keep": 3, "fill": "000000"},
+             "size:size_t", "size:integer", "size:number", "nupvals", "luac_num", "luac_int"],
+  "function": ["maxstack", "code", {"keep": "u8"}, "constants", "nparams", "vararg", "source",
+               "line", "lastline", "protos", "upvals", "lines", "upnames", "locvars"],
+  "encoding": {"count": "uleb", "line": "u16", "lineinfo": "u16", "pc": "uleb", "string": "count"},
+  "const_tags": {"integer": 7, "float": 8, "short_string": 9, "long_string": 10},
+  "instruction": {"op": [26, 6], "A": [18, 8], "B": [0, 9], "C": [9, 9], "Bx": [0, 18], "Ax": [0, 26]},
+  "opcodes": {"type": "affine", "mul": 5, "add": 11, "mod": 47},
+  "strings": {"type": "xor", "key": "a5c3", "scope": ["constants"]}
+}

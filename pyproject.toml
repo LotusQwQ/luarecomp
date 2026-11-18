@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "luarecomp"
+version = "2.0.0"
+description = "Compile Lua source into modified bytecode formats (Lua 5.1-5.4, LuaJIT 2.0/2.1) and convert them back"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = ["lupa>=2.0"]
+
+[project.scripts]
+luarecomp = "luarecomp.cli:main"
+
+[tool.setuptools]
+packages = ["luarecomp"]
+py-modules = ["lua53recomp"]

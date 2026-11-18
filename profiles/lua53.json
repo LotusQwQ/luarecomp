@@ -1,5 +1,6 @@
 {
   "name": "lua53",
+  "lua": "5.3",
   "signature": "1b4c7561",
   "version": 83,
   "format": 0,
