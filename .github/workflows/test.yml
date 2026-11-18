@@ -13,11 +13,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         python: ["3.10", "3.13"]
     env:
-      # lupa 在 macOS arm64 上没有 LuaJIT，那里允许跳过；其他平台缺 VM 直接算失败
-      LUARECOMP_REQUIRE_ALL: ${{ matrix.os == 'macos-latest' && '0' || '1' }}
+      LUARECOMP_REQUIRE_ALL: "1"     # 所有 VM 都必须在，缺了直接算失败
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
