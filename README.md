@@ -1,5 +1,7 @@
 # luarecomp
 
+[![测试](https://github.com/LotusQwQ/luarecomp/actions/workflows/test.yml/badge.svg)](https://github.com/LotusQwQ/luarecomp/actions/workflows/test.yml)
+
 把 **Lua 源码编译成各种"魔改格式"的字节码**，也能把魔改字节码转回标准格式，放进真正的 Lua 虚拟机里加载、运行和校验。
 
 > Compile Lua source into modified bytecode formats and convert such bytecode back to the standard dump format, so it can be loaded, run and verified by the real VM. Supports PUC Lua 5.1 / 5.2 / 5.3 / 5.4 and LuaJIT 2.0 / 2.1. A format is described by a JSON profile.
