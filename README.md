@@ -1,4 +1,4 @@
-# lua53-recompiler（luarecomp）
+# luarecomp
 
 把 **Lua 源码编译成各种"魔改格式"的字节码**，也能把魔改字节码转回标准格式，放进真正的 Lua 虚拟机里加载、运行和校验。
 
@@ -50,6 +50,10 @@ python -m luarecomp check -p my_game.json chunks/*.bytes
 # 反汇编、静态校验
 python -m luarecomp disasm -p my_game.json game.bytes --max 200
 python -m luarecomp verify -p my_game.json game.bytes
+
+# 数据表：执行后导出成 JSON；改完再编回去（见下文「数据表」）
+python -m luarecomp run game_table.bytes -p my_game.json --record Ctor -o table.json
+python -m luarecomp build-table table.json -p my_game.json --constructor Ctor -o new_table.bytes
 ```
 
 `-p` 可以是 JSON 路径，也可以是 `profiles/` 里的名字（如 `-p lua54`）。Windows 下通配符由工具自己展开。
@@ -60,7 +64,7 @@ python -m luarecomp verify -p my_game.json game.bytes
 
 本工具只处理**已经解密的**字节码。外层的加密、压缩、打包不在范围内（见文末「使用边界」）。
 
-### 1. 文件头：`inspect`（不再靠猜）
+### 1. 文件头：`inspect`
 
 ```bash
 python -m luarecomp inspect a.bytes b.bytes c.bytes -o my_game.json
@@ -99,13 +103,13 @@ python -m luarecomp infer-ops -p my_game.json chunks/*.bytes --known known.json 
 python -m luarecomp check -p my_game.json chunks/*.bytes
 ```
 
-每个 chunk 依次过三关，失败时会告诉你**卡在哪一关、卡在哪里**：
+每个 chunk 依次验证三个步骤，失败时会告诉你**卡在哪里**：
 
 1. **解析**：报告字节偏移、结构路径（如 `main/3/1`）、字段名（如 `K[12].tag`）、最后成功读到的几个字段，以及偏移附近的十六进制内容。还会给出提示，比如"LUAC_INT 不对，多半是整数宽度或大小端错了"。
 2. **逐字节回写**：报告第一个不一致的字节，以及它在原文件里属于哪个字段、在重写结果里由哪个字段写出。
 3. **语义**：转成标准字节码后跑静态校验器，再交给真实 VM 加载。违规按 opcode 汇总，直接指出**哪个自定义 opcode 号**可疑。
 
-第 3 关很重要：**Lua 5.2 以后的加载器根本不校验字节码**。opcode 映射错了，`load` 照样成功，运行时才崩溃或悄悄算错。v1 的 `check` 只做到 load 这一步，会把错误的 profile 报成 OK。如果只有极少数指令违规，提示会改成"更像是这一处数据损坏或手工生成"，而不是"映射错了"。
+第 3 个步骤很重要：**Lua 5.2 以后的加载器根本不校验字节码**。opcode 映射错了，`load` 照样成功，运行时才崩溃或算错。v1 的 `check` 只做到 load 这一步，会把错误的 profile 报成 OK。如果只有极少数指令违规，提示会改成"更像是这一处数据损坏或手工生成"，而不是"映射错"。
 
 `--json` 输出机器可读结果，`-q` 不打印十六进制内容。
 
@@ -210,6 +214,29 @@ open("out.bytes", "wb").write(R.dump(patched, prof))
 
 ---
 
+## 数据表：导出成 JSON、改完再编回去
+
+很多游戏把配置表编译成 chunk：执行后返回一张大表，表里每一行常常由宿主函数构造，比如 `Ctor("ItemData", {id = 1, ...})`。
+
+```bash
+# 导出：转成标准格式后在真实 VM 里执行，Ctor 换成记录类型的桩（返回 fields 加上 "__type"）
+python -m luarecomp run game_table.bytes -p my_game.json --record Ctor -o table.json
+
+# 修改 table.json 之后重建：JSON -> Lua 源码 -> 真实编译器 -> 魔改格式
+python -m luarecomp build-table table.json -p my_game.json --constructor Ctor     --source table.lua --compare game_table.bytes -o new_table.bytes
+```
+
+- **不手拼字节码**：重建时生成的是普通 Lua 源码（可以用 `--source` 保存下来查看），由真实编译器来编译。RK 位宽、常量数量、SETLIST 分批这些细节都交给编译器处理。
+- **自动回读**：构建完成后会立即在真实 VM 里执行一遍新 chunk，确认它返回的数据与 JSON **逐项一致**，否则报错。`--compare` 会再和原 chunk 对比，列出差异所在的路径（比如 `return[1][1][37].name: "sword" vs "axe"`）。
+- **JSON 约定保证精确往返**：
+  - 键为 1..n 的表导出为数组；
+  - 整数键写成 `"123"`；
+  - 键是布尔、浮点或者「长得像整数的字符串」的表，用 `{"__pairs__": [[键, 值], ...]}` 表示；
+  - 非 UTF-8 字符串用 `{"__bytes__": "hex"}` 表示；
+  - 整数和浮点数保持区分；
+  - 键按固定顺序输出，方便做 diff。
+- **局限**：重建出的字节码与原 chunk 的寄存器分配、常量顺序不一定相同，只保证**执行结果相同**。如果宿主除了返回值还依赖别的东西（比如全局副作用、函数值），需要用 `--env` 提供更完整的桩。
+
 ## 作为库使用
 
 ```python
@@ -230,7 +257,7 @@ runtime.run(std, "5.3", env_setup=b"function(env) env.CS = {} end")   # 在真�
 
 ### 从 v1 迁移
 
-`lua53recomp.py` 仍然存在，v1 的函数、命令行和 profile 都**原样可用**。`tests/test_compat_v1.py` 就是 v1 的原测试，一字未改，并且全部通过。新代码请用 `import luarecomp`。
+`lua53recomp.py` 仍然存在，v1 的函数、命令行和 profile 都**原样可用**。`tests/test_compat_v1.py` 就是 v1 的原测试，无改动，且全部通过。新代码请用 `import luarecomp`。
 
 ---
 
@@ -238,7 +265,7 @@ runtime.run(std, "5.3", env_setup=b"function(env) env.CS = {} end")   # 在真�
 
 **能做**：上面「支持范围」里列出的全部内容。
 
-**做不到或做不全的**（如实说明）：
+**做不到或做不全的**：
 
 - **结构上无法区分的 opcode**：ADD、SUB、MUL 这类 opcode 对操作数的要求完全一样，单凭字节码分不出来。如果游戏用的不是平移类映射，就需要 `match-ops` 配合已知源码；样本覆盖不到的 opcode 也确定不了。
 - **LuaJIT** 里运行时专用的 opcode（JFORL、ILOOP、FUNCF…）不会出现在字节码文件里，它们的编号对文件转换没有影响。
@@ -258,10 +285,11 @@ LUARECOMP_SLOW=1 python -m unittest discover -s tests   # 加上超大函数（E
 - 静态校验器对真实编译器全部产物零误报（PUC 5.1–5.4 覆盖了每一个 opcode）；
 - LuaJIT 的 opcode 表与 VM 内部的 `lj_bc_mode` 逐项核对；
 - 深度魔改与插件；
-- opcode 推断（绝不排除真实答案）；
+- opcode 推断；
 - 注入的各项保证；
 - `check` 的错误定位；
 - profile 报错信息；
+- 数据表导出与重建（6 种 VM）；
 - 命令行；
 - v1 兼容。
 
@@ -286,10 +314,10 @@ LUARECOMP_SLOW=1 python -m unittest discover -s tests   # 加上超大函数（E
 - 传播他人享有权利的脚本、数据、资源或修改后的客户端；
 - 任何违反适用法律、许可协议或用户协议的用途。
 
-**工具本身刻意不做的事：**
+**工具本身刻意：**
 
 - 不提供解密、脱壳、内存读写、注入进程或对抗反作弊的功能。插件机制是为了描述格式差异，**不是**为了绕过保护。
-- 本仓库**不收录、也不接受**针对具体商业产品的 profile、密钥、插件或字节码样本。仓库里所有 profile 和测试数据，要么是虚构的，要么来自标准 Lua / LuaJIT 实现。
+- 本仓库**不收录、也不接受**针对具体商业产品的 profile、密钥、插件或字节码样本。仓库里所有 profile 和测试数据，均为虚构或来自标准 Lua / LuaJIT 实现。
 - 贡献代码时请遵守同样的规则：Issue 和 PR 里不要附带第三方产品的文件或密钥。
 
 **责任：** 使用者自行判断并承担使用本工具的全部责任。软件按 MIT 许可"原样"提供，不附带任何担保。本声明不构成法律意见：各地法律对逆向工程、互操作例外和技术保护措施的规定不同，不确定时请咨询专业人士。

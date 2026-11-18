@@ -7,7 +7,7 @@ import os
 import sys
 import traceback
 
-from . import __version__, core, detect, diagnose, disasm, inject, opinfer, runtime, verify
+from . import __version__, core, datatable, detect, diagnose, disasm, inject, opinfer, runtime, verify
 from .errors import FormatError, RecompError
 from .profile import Profile, standard
 
@@ -233,6 +233,61 @@ def cmd_inject(a):
     _write(a.out, core.dump(new, prof))
 
 
+def cmd_run(a):
+    data = _read(a.chunk)
+    prof = _profile(a, data)
+    env = _read(a.env) if a.env else None
+    values = datatable.run(data, prof, records=a.record or (), env_lua=env)
+    txt = json.dumps(values, ensure_ascii=False, indent=1 if a.pretty else None)
+    if a.out:
+        with open(a.out, "w", encoding="utf-8") as f:
+            f.write(txt)
+            f.write("\n")
+        print("wrote %s: %d return value(s)" % (a.out, len(values)))
+    else:
+        print(txt)
+
+
+def cmd_build_table(a):
+    prof = _profile(a)
+    try:
+        with open(a.json, encoding="utf-8") as f:
+            values = json.load(f)
+    except (OSError, ValueError) as exc:
+        raise RecompError("cannot read %s: %s" % (a.json, exc))
+    if not a.values:
+        values = [values]              # the file holds the single returned value
+    data, src = datatable.build(values, prof, a.chunkname.encode("utf-8"), constructor=a.constructor,
+                                type_name=a.type_name)
+    if a.source:
+        with open(a.source, "wb") as f:
+            f.write(src)
+        print("wrote %s (generated Lua source)" % a.source)
+    records = [a.constructor] if a.constructor else ()
+    back = datatable.run(data, prof, records=records)
+    d = datatable.diff(values, back)
+    if d:
+        print("the built chunk does NOT return the input data:")
+        for line in d:
+            print("  " + line)
+        return EXIT_FAIL
+    print("  check: the built chunk returns exactly the input data")
+    rc = EXIT_OK
+    if a.compare:
+        orig = datatable.run(_read(a.compare), prof, records=records)
+        d = datatable.diff(orig, back)
+        if d:
+            print("  compare with %s (original first): %s difference(s):"
+                  % (a.compare, "%d+" % len(d) if len(d) >= 20 else len(d)))
+            for line in d:
+                print("    " + line)
+            rc = EXIT_FAIL
+        else:
+            print("  compare with %s: identical results" % a.compare)
+    _write(a.out, data)
+    return rc
+
+
 # ---------------------------------------------------------------- parser
 def build_parser():
     ap = argparse.ArgumentParser(prog="luarecomp", description="Compile Lua source into modified bytecode "
@@ -312,6 +367,28 @@ def build_parser():
     sp.add_argument("--force", action="store_true", help="inject even if the chunk was injected before")
     sp.add_argument("--dry-run", action="store_true", help="also run both versions in a stub environment")
     sp.set_defaults(fn=cmd_inject)
+
+    sp = prof(sub.add_parser("run", help="run a chunk in a stub environment, print what it returns as JSON"),
+              required=False)
+    sp.add_argument("chunk")
+    sp.add_argument("--record", action="append", metavar="NAME",
+                    help="stub this global constructor: NAME(type, fields) returns fields + __type (repeatable)")
+    sp.add_argument("--env", help="Lua file with function(env) ... end, run before the chunk")
+    sp.add_argument("-o", "--out", help="write the JSON here")
+    sp.add_argument("--pretty", action="store_true")
+    sp.set_defaults(fn=cmd_run)
+
+    sp = prof(sub.add_parser("build-table", help="JSON -> Lua source -> compiled chunk (inverse of run)"))
+    sp.add_argument("json", help="JSON file; by default the list of return values written by `run`")
+    sp.add_argument("-o", "--out", required=True)
+    sp.add_argument("--single", dest="values", action="store_false",
+                    help="the JSON file is one value (the chunk returns just that)")
+    sp.add_argument("--constructor", metavar="NAME", help="objects with __type become NAME(type, {fields})")
+    sp.add_argument("--type-name", help="use this type name for every record")
+    sp.add_argument("--source", help="also write the generated Lua source here")
+    sp.add_argument("--compare", metavar="CHUNK", help="report differences against this original chunk")
+    sp.add_argument("-n", "--chunkname", default="=table")
+    sp.set_defaults(fn=cmd_build_table)
     return ap
 
 
